@@ -70,6 +70,7 @@ Authors: Richard Decal and Joe Comer
 
    2. New db jail_norm_ComerDecal.db (readable by Noah + Dr Gillman), and create the tables for a jail db in 3rd normal form. Use all appropriate integrity constraints.
    3. Populate the new db
+   
       1. Open jail.db.
       2. Attach your new db, giving it a schema name of jailnew.
       3. Now you can use table foo in the new db, as jailnew.foo.

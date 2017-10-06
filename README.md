@@ -15,16 +15,40 @@ Authors: Richard Decal and Joe Comer
       2. Attach your new db, giving it a schema name of jailnew.
       3. Now you can use table foo in the new db, as jailnew.foo.
 
-    CREATE TABLE bookings(bookingNumber INT PRIMARY KEY, Agency VARCHAR, ABN INT, Court VARCHAR, releaseDate TIMESTAMP, releaseCode VARCHAR,SOID INT, FOREIGN KEY(SOID) REFERENCES people(SOID));
+    CREATE TABLE bookings(bookingNumber INT PRIMARY KEY, Agency VARCHAR, ABN INT, Court VARCHAR, releaseDate TIMESTAMP, releaseCode VARCHAR, SOID INT, 
+    FOREIGN KEY(SOID) REFERENCES people(SOID));
+    
     CREATE TABLE charges(charge_id INTEGER PRIMARY KEY AUTOINCREMENT, charge_name VARCHAR UNIQUE);
+    
     CREATE TABLE Addresses(Address_id INTEGER PRIMARY KEY AUTOINCREMENT, address VARCHAR UNIQUE);
-    CREATE TABLE people(SOID INT PRIMARY KEY, name VARCHAR, DOB TIMESTAMP, POB VARCHAR, Race CHAR(1) CHECK (Race in ("A","B","I","U","W","a","b","w")), e CHAR(1) CHECK (e IN ("H","N","U","h","n","u")));
-    CREATE TABLE BookingsCharges(bookingNumber INT FORIEGN KEY REFERENCES bookings(bookingNumber), chargeType VARCHAR, charge_id FORIEGN KEY REFERENCES charges(charge_id), PRIMARY KEY (bookingNumber,charge_id));
-    INSERT INTO addresses values(address) SELECT DISTINCT address address FROM jailnew.bookingsB;
-    INSERT INTO bookings SELECT bookingNumber, Agency, ABN, Court, releaseDate, releaseCode, SOID FROM jailnew.bookingsB;
-    INSERT INTO people (SOID, name, DOB, POB, Race, e) SELECT * FROM (select SOID, name, DOB, POB, race, e FROM jailnew.bookingsB GROUP BY SOID);
-    INSERT INTO BookingsCharges(bookingNumber, chargeType, charge_id) SELECT bookingNumber, chargeType, charge_id FROM (select a.bookingNumber, a.chargeType, b.charge_id FROM jailnew.booking_addl_charge a LEFT JOIN charges b ON a.charge = b.charge_name);
-    INSERT INTO BookingsCharges(bookingNumber, chargeType, charge_id) SELECT bookingNumber, chargeType, charge_id FROM (select a.bookingNumber, a.chargeType, b.charge_id FROM jailnew.bookingsB a LEFT JOIN charges b ON a.charge = b.charge_name);
+    
+    CREATE TABLE people(SOID INT PRIMARY KEY, name VARCHAR, DOB TIMESTAMP, POB VARCHAR, Race CHAR(1) 
+    CHECK (Race in ("A","B","I","U","W","a","b","w")), e CHAR(1) 
+    CHECK (e IN ("H","N","U","h","n","u")));
+    
+    CREATE TABLE BookingsCharges(bookingNumber INT FORIEGN KEY REFERENCES bookings(bookingNumber), chargeType VARCHAR, charge_id FORIEGN KEY REFERENCES charges(charge_id), 
+    PRIMARY KEY (bookingNumber,charge_id));
+    
+    INSERT INTO addresses values(address) 
+    SELECT DISTINCT address address 
+    FROM jailnew.bookingsB;
+    
+    INSERT INTO bookings SELECT bookingNumber, Agency, ABN, Court, releaseDate, releaseCode, SOID 
+    FROM jailnew.bookingsB;
+    
+    INSERT INTO people (SOID, name, DOB, POB, Race, e) 
+    SELECT * FROM (select SOID, name, DOB, POB, race, e 
+    FROM jailnew.bookingsB GROUP BY SOID);
+    
+    INSERT INTO BookingsCharges(bookingNumber, chargeType, charge_id) 
+    SELECT bookingNumber, chargeType, charge_id FROM (select a.bookingNumber, a.chargeType, b.charge_id 
+    FROM jailnew.booking_addl_charge a 
+    LEFT JOIN charges b ON a.charge = b.charge_name);
+    
+    INSERT INTO BookingsCharges(bookingNumber, chargeType, charge_id) 
+    SELECT bookingNumber, chargeType, charge_id 
+    FROM (select a.bookingNumber, a.chargeType, b.charge_id FROM jailnew.bookingsB a 
+    LEFT JOIN charges b ON a.charge = b.charge_name);
 
 
 1. Put fanfiction.stories into 2nd normal form (which implies 1st normal form). To keep url as primary key you’ll need to create a new table. starringchars isn’t the only problem. You’ll probably want to read the Postgres docs on string functions. 
@@ -61,7 +85,9 @@ Creating characters:
 
 Creating starringchars:
 
-    CREATE TABLE starringchars AS (SELECT url url_id, unnest(string_to_array(rtrim(starringchars), ' & ')) character_id FROM stories_orig);
+    CREATE TABLE starringchars 
+    AS (SELECT url url_id, unnest(string_to_array(rtrim(starringchars), ' & ')) character_id 
+    FROM stories_orig);
 
 Replace URL string with the url_id we made earlier
 
@@ -71,23 +97,27 @@ Replace URL string with the url_id we made earlier
 
 Replace character names with the character_id we made earlier:
 
-    UPDATE starringchars SET character_id = characters.character_id
+    UPDATE starringchars 
+    SET character_id = characters.character_id
     FROM characters
     WHERE starringchars.character_id = characters.character_name;
 
 Creating genreness:
 
-    CREATE TABLE genreness AS (SELECT url, unnest(string_to_array(genre,'/')) genreness FROM stories_orig);
+    CREATE TABLE genreness 
+    AS (SELECT url, unnest(string_to_array(genre,'/')) genreness 
+    FROM stories_orig);
 
 Replace URLs with their id:
 
-    UPDATE genreness set url = urls.url_id
-    from urls
-    where urls.url = genreness.url;
+    UPDATE genreness SET url = urls.url_id
+    FROM urls
+    WHERE urls.url = genreness.url;
 
 Replace genres with their ID:
 
-    UPDATE genreness SET genreness = genres.genre_id
+    UPDATE genreness 
+    SET genreness = genres.genre_id
     FROM genres
     WHERE genres.genre = genreness.genreness;
 
@@ -108,17 +138,24 @@ MATCH FULL is a restraint on foreign keys consisting of more than one column, es
 
 ###   2i
 
-     SELECT relname FROM pg_class WHERE relname IN ('countries','cities','venues','events');
+     SELECT relname FROM pg_class 
+     WHERE relname IN ('countries','cities','venues','events');
 ### 2ii
 
-    SELECT c.country_name FROM venues v JOIN countries c ON  v.country_code=c.country_code JOIN events e ON v.venue_id = e.venue_id;
+    SELECT c.country_name FROM venues v 
+    JOIN countries c ON  v.country_code = c.country_code JOIN events e 
+    ON v.venue_id = e.venue_id;
     
 ###3iii
 	ALTER TABLE venues ADD active boolean default TRUE;
 
 ### 3. Section 2.3, Do problem 2.
    
-        SELECT * FROM crosstab( 'SELECT extract(year from starts) AS year, extract(month from starts) AS month, count(*) FROM events GROUP BY year, month',;
-        'SELECT * FROM generate_series(1,12)' ) AS ( year int, jan int, feb int, mar int, apr int, may int, jun int, jul int, aug int, sep int, oct int, nov int, dec int ) 
+        SELECT * FROM crosstab( 'SELECT extract(year from starts) 
+        AS year, extract(month from starts) 
+        AS month, count(*) FROM events GROUP BY year, month',;
+        
+        'SELECT * FROM generate_series(1,12)' ) 
+        AS ( year int, jan int, feb int, mar int, apr int, may int, jun int, jul int, aug int, sep int, oct int, nov int, dec int ) 
         ORDER BY YEAR;
 

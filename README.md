@@ -15,16 +15,16 @@ Authors: Richard Decal and Joe Comer
       2. Attach your new db, giving it a schema name of jailnew.
       3. Now you can use table foo in the new db, as jailnew.foo.
 
-    CREATE TABLE bookings(bookingNumber int PRIMARY KEY, Agency varchar, ABN int, Court varchar, releaseDate timestamp, releaseCode varchar,SOID int, foreign key(SOID) references people(SOID));
-    CREATE TABLE charges(charge_id integer primary key autoincrement, charge_name varchar unique);
-    CREATE TABLE Addresses(Address_id integer primary key autoincrement, address varchar unique);
-    CREATE TABLE people(SOID int primary key, name varchar, DOB timestamp, POB varchar, Race char(1) check (Race in ("A","B","I","U","W","a","b","w")), e char(1) check (e in ("H","N","U","h","n","u")));
-    CREATE TABLE BookingsCharges(bookingNumber int foriegn key references bo                                                                             okings(bookingNumber), chargeType varchar, charge_id foriegn key references char                                                                             ges(charge_id), primary key (bookingNumber,charge_id));
-    insert into addresses values(address) select distinct address address from jailnew.bookingsB;
-    insert into bookings select bookingNumber, Agency, ABN, Court, releaseDate, releaseCode, SOID from jailnew.bookingsB;
-    insert into people (SOID, name, DOB, POB, Race, e) select * from (select SOID, name, DOB, POB, race, e from jailnew.bookingsB group by SOID);
-    insert into BookingsCharges(bookingNumber, chargeType, charge_id) select bookingNumber, chargeType, charge_id from (select a.bookingNumber, a.chargeType, b.charge_id from jailnew.booking_addl_charge a left join charges b on a.charge = b.charge_name);
-    insert into BookingsCharges(bookingNumber, chargeType, charge_id) select bookingNumber, chargeType, charge_id from (select a.bookingNumber, a.chargeType, b.charge_id from jailnew.bookingsB a left join charges b on a.charge = b.charge_name);
+    CREATE TABLE bookings(bookingNumber INT PRIMARY KEY, Agency VARCHAR, ABN INT, Court VARCHAR, releaseDate TIMESTAMP, releaseCode VARCHAR,SOID INT, FOREIGN KEY(SOID) REFERENCES people(SOID));
+    CREATE TABLE charges(charge_id INTEGER PRIMARY KEY AUTOINCREMENT, charge_name VARCHAR UNIQUE);
+    CREATE TABLE Addresses(Address_id INTEGER PRIMARY KEY AUTOINCREMENT, address VARCHAR UNIQUE);
+    CREATE TABLE people(SOID INT PRIMARY KEY, name VARCHAR, DOB TIMESTAMP, POB VARCHAR, Race CHAR(1) CHECK (Race in ("A","B","I","U","W","a","b","w")), e CHAR(1) CHECK (e IN ("H","N","U","h","n","u")));
+    CREATE TABLE BookingsCharges(bookingNumber INT FORIEGN KEY REFERENCES bookings(bookingNumber), chargeType VARCHAR, charge_id FORIEGN KEY REFERENCES charges(charge_id), PRIMARY KEY (bookingNumber,charge_id));
+    INSERT INTO addresses values(address) SELECT DISTINCT address address FROM jailnew.bookingsB;
+    INSERT INTO bookings SELECT bookingNumber, Agency, ABN, Court, releaseDate, releaseCode, SOID FROM jailnew.bookingsB;
+    INSERT INTO people (SOID, name, DOB, POB, Race, e) SELECT * FROM (select SOID, name, DOB, POB, race, e FROM jailnew.bookingsB GROUP BY SOID);
+    INSERT INTO BookingsCharges(bookingNumber, chargeType, charge_id) SELECT bookingNumber, chargeType, charge_id FROM (select a.bookingNumber, a.chargeType, b.charge_id FROM jailnew.booking_addl_charge a LEFT JOIN charges b ON a.charge = b.charge_name);
+    INSERT INTO BookingsCharges(bookingNumber, chargeType, charge_id) SELECT bookingNumber, chargeType, charge_id FROM (select a.bookingNumber, a.chargeType, b.charge_id FROM jailnew.bookingsB a LEFT JOIN charges b ON a.charge = b.charge_name);
 
 
 1. Put fanfiction.stories into 2nd normal form (which implies 1st normal form). To keep url as primary key you’ll need to create a new table. starringchars isn’t the only problem. You’ll probably want to read the Postgres docs on string functions. 

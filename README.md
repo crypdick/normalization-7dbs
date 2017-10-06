@@ -5,7 +5,7 @@ Authors: Richard Decal and Joe Comer
 ## Normalize the jail database:
   ### 1. ER diagram of important entities.
 
-![](bookings_ER_Diagram.png)  
+![](bookings_ER_Diagram.png)
   
   ### 2. New db jail_norm_ComerDecal.db (readable by Noah + Dr Gillman), and create the tables for a jail db in 3rd normal form. Use all appropriate integrity constraints.
 
@@ -53,8 +53,6 @@ Authors: Richard Decal and Joe Comer
 
 1. Put fanfiction.stories into 2nd normal form (which implies 1st normal form). To keep url as primary key you’ll need to create a new table. starringchars isn’t the only problem. You’ll probably want to read the Postgres docs on string functions. 
 
-
-
 #  normalize the fanfiction db
 ## 1. Put fanfiction.stories into 2nd normal form (which implies 1st normal form). To keep url as primary key you’ll need to create a new table. starringchars isn’t the only problem. You’ll probably want to read the Postgres docs on string functions.
 
@@ -71,7 +69,7 @@ Creating genres:
 
     CREATE TABLE genres AS (SELECT DISTINCT  unnest(string_to_array(genre,'/')) genre FROM stories_orig);
 
-    ALTER TABLE genres  ADD COLUMN genre_id SERIAL;
+    ALTER TABLE genres ADD COLUMN genre_id SERIAL;
 
     ALTER TABLE genres ADD PRIMARY KEY (genre_id);
 

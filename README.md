@@ -2,69 +2,77 @@
 
 Authors: Richard Decal and Joe Comer
 
-## Normalize the jail database:
-  ### 1. ER diagram of important entities.
+# Normalize the jail database:
+  ## ER diagram of important entities.
 
 ![](bookings_ER_Diagram.png)
   
-  ### 2. New db jail_norm_ComerDecal.db (readable by Noah + Dr Gillman), and create the tables for a jail db in 3rd normal form. Use all appropriate integrity constraints.
+  ## New db jail_norm_ComerDecal.db (readable by Noah + Dr Gillman), and create the tables for a jail db in 3rd normal form. Use all appropriate integrity constraints.
 
-  ### 3. Populate the new db
+  ## Populate the new db
 
-      1. Open jail.db.
-      2. Attach your new db, giving it a schema name of jailnew.
-      3. Now you can use table foo in the new db, as jailnew.foo.
+  1. Open jail.db.
+  2. Attach your new db, giving it a schema name of jailnew.
+  3. Now you can use table foo in the new db, as jailnew.foo.
 	  
-	###Rather than open jail.db and attach my new db, I opened my db and attached jail.db.
+Rather than open jail.db and attach my new db, I opened my db and attached jail.db.
+
 	$Sqlite3 jail_norm_ComerDecal.db
 	=>attach '../Homelessness/Jail/jail.db' as jailnew;
 	
-	###Based on our E-R diagram, I created the bookings table with only the attributes that depend directly on the booking and only the booking.
+Based on our E-R diagram, I created the bookings table with only the attributes that depend directly on the booking and only the booking.
+
     =>CREATE TABLE bookings(bookingNumber INT PRIMARY KEY, Agency VARCHAR, ABN INT, Court VARCHAR, releaseDate TIMESTAMP, releaseCode VARCHAR, SOID INT, 
     FOREIGN KEY(SOID) REFERENCES people(SOID));
     
-	###Charges and addresses get their own tables with serial IDs as primary keys. A uniqueness constraint is needed for the actual values.
+Charges and addresses get their own tables with serial IDs as primary keys. A uniqueness constraint is needed for the actual values.
+
     =>CREATE TABLE charges(charge_id INTEGER PRIMARY KEY AUTOINCREMENT, charge_name VARCHAR UNIQUE);
     
     =>CREATE TABLE Addresses(Address_id INTEGER PRIMARY KEY AUTOINCREMENT, address VARCHAR UNIQUE);
     
-	###Race is only a single character, and doesn't have many distinct values. I created a check constraint to ensure consistency, but an extra table seemed like overkill. Race depends only on people, so no 2NF violation. Same for ethnicity. SOID is the primary key because it uniquely indicates a person, and determines all the other attributes in this table. 
+Race is only a single character, and doesn't have many distinct values. I created a check constraint to ensure consistency, but an extra table seemed like overkill. Race depends only on people, so no 2NF violation. Same for ethnicity. SOID is the primary key because it uniquely indicates a person, and determines all the other attributes in this table. 
+
     =>CREATE TABLE people(SOID INT PRIMARY KEY, name VARCHAR, DOB TIMESTAMP, POB VARCHAR, Race CHAR(1) 
     CHECK (Race in ("A","B","I","U","W","a","b","w")), e CHAR(1) 
     CHECK (e IN ("H","N","U","h","n","u")));
     
-	###chargeType and caseNumber are determined by a combo of bookingNumber and charge, so they are the primary key. They need to actually exist, though, so they get FK constraints.
+chargeType and caseNumber are determined by a combo of bookingNumber and charge, so they are the primary key. They need to actually exist, though, so they get FK constraints.
+
     =>CREATE TABLE BookingsCharges(bookingNumber INT FORIEGN KEY REFERENCES bookings(bookingNumber), chargeType VARCHAR, charge_id FORIEGN KEY REFERENCES charges(charge_id), 
     PRIMARY KEY (bookingNumber,charge_id));
     
-	###Now we add the data. Some addresses repeat, so we select distinct to avoid repetition.
+Now we add the data. Some addresses repeat, so we select distinct to avoid repetition.
+
     =>INSERT INTO addresses values(address) 
     SELECT DISTINCT address address 
     FROM jailnew.bookingsB;
     
-	###All that's needed here is to pull the appropraite columns from the original bookingsB
+All that's needed here is to pull the appropraite columns from the original bookingsB
+
     =>INSERT INTO bookings SELECT bookingNumber, Agency, ABN, Court, releaseDate, releaseCode, SOID 
     FROM jailnew.bookingsB;
     
-	###SOIDs can repeat, but the other data should always stay the same (since a person's birthday, etc don't change,) so rouping by SOID makes sure we get only unique rows without losing any info from other columns.
+SOIDs can repeat, but the other data should always stay the same (since a person's birthday, etc don't change,) so rouping by SOID makes sure we get only unique rows without losing any info from other columns.
+
     =>INSERT INTO people (SOID, name, DOB, POB, Race, e) 
     SELECT * FROM (select SOID, name, DOB, POB, race, e 
     FROM jailnew.bookingsB GROUP BY SOID);
     
-	###I left join booking_addl_charges with charges (left join so that no info is lost from the former), matching by the name of the charge. This lets me insert charge IDs that match the charge for each row in booking_addl_charge.
+I left join booking_addl_charges with charges (left join so that no info is lost from the former), matching by the name of the charge. This lets me insert charge IDs that match the charge for each row in booking_addl_charge.
+
     =>INSERT INTO BookingsCharges(bookingNumber, chargeType, charge_id) 
     SELECT bookingNumber, chargeType, charge_id FROM (select a.bookingNumber, a.chargeType, b.charge_id 
     FROM jailnew.booking_addl_charge a 
     LEFT JOIN charges b ON a.charge = b.charge_name);
 	
-    ###This is basically the same command, but from bookingsB to get the primary charge for each bookingNumber.
+This is basically the same command, but from bookingsB to get the primary charge for each bookingNumber.
+
     =>INSERT INTO BookingsCharges(bookingNumber, chargeType, charge_id) 
     SELECT bookingNumber, chargeType, charge_id 
     FROM (select a.bookingNumber, a.chargeType, b.charge_id FROM jailnew.bookingsB a 
     LEFT JOIN charges b ON a.charge = b.charge_name);
 
-
-1. Put fanfiction.stories into 2nd normal form (which implies 1st normal form). To keep url as primary key you’ll need to create a new table. starringchars isn’t the only problem. You’ll probably want to read the Postgres docs on string functions. 
 
 #  normalize the fanfiction db
 ## 1. Put fanfiction.stories into 2nd normal form (which implies 1st normal form). To keep url as primary key you’ll need to create a new table. starringchars isn’t the only problem. You’ll probably want to read the Postgres docs on string functions.

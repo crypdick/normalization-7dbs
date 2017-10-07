@@ -5,82 +5,73 @@ Authors: Richard Decal and Joe Comer
 ## Normalize the jail database:
    1. ER diagram of important entities.
     
-    sqlite> .schema
-    CREATE TABLE booking_addl_charge(
-    "bookingNumber" TEXT,
-    "chargeType" TEXT,
-    "charge" TEXT,
-    "court" TEXT,
-    "caseNumber" TEXT
-    );
-    CREATE TABLE booking_charges(
-    bookingNumber TEXT,
-    charge TEXT
-    );
-    CREATE TABLE "bookingsA"(
-    bookingNumber TEXT,
-    name TEXT,
-    race TEXT,
-    sex TEXT,
-    DOB TEXT,
-    arrestDate TEXT,
-    bookingDate TEXT,
-    releaseDate TEXT,
-    releaseCode TEXT,
-    releaseRemarks TEXT
-    );
-    CREATE TABLE "bookingsB" ("name" TEXT,
-    "bookingNumber" TEXT,
-    "agency" TEXT,
-    "ABN" TEXT,
-    "race" TEXT,
-    "sex" TEXT,
-    "e" TEXT,
-    "DOB" TEXT,
-    "chargeType" TEXT,
-    "charge" TEXT,
-    "court" TEXT,
-    "caseNumber" TEXT,
-    "address" TEXT, city text,  "POB" TEXT,
-    "releaseDate" TEXT,
-    "releaseCode" TEXT,
-    "SOID" TEXT
-    );
-    CREATE TABLE homeless_addresses(
-    "address" TEXT,
-    "rank" TEXT,
-    "description" TEXT
-    );
-    CREATE TABLE homeless_charges(
-    "charge" TEXT,
-    "rank" TEXT
-    );
-    CREATE TABLE inmates(
-    SOID int PRIMARY KEY,
-    name text,
-    DOB text,
-    sex text,
-    race text,
-    e text);
-    CREATE TABLE variables(x);
-    CREATE INDEX booking_address on bookingsB (address);
-    CREATE INDEX booking_charge on bookingsB (charge);
-    CREATE INDEX booking_soid on bookingsB (bookingNumber,SOID);
-    CREATE INDEX bookingsA1_booking on "bookingsA" (bookingNumber);
-	
+    
 -------------------------------------------------------------	
-CREATE TABLE bookings(bookingNumber int PRIMARY KEY, Agency varchar, ABN int, Court varchar, releaseDate timestamp, releaseCode varchar,SOID int, foreign key(SOID) references people(SOID));
-CREATE TABLE charges(charge_id integer primary key autoincrement, charge_name varchar unique);
-CREATE TABLE Addresses(Address_id integer primary key autoincrement, address varchar unique);
-CREATE TABLE people(SOID int primary key, name varchar, DOB timestamp, POB varchar, Race char(1) check (Race in ("A","B","I","U","W","a","b","w")), e char(1) check (e in ("H","N","U","h","n","u")));
-CREATE TABLE BookingsCharges(bookingNumber int foriegn key references bo                                                                             okings(bookingNumber), chargeType varchar, charge_id foriegn key references char                                                                             ges(charge_id), primary key (bookingNumber,charge_id));
-insert into addresses values(address) select distinct address address from jailnew.bookingsB;
-insert into bookings select bookingNumber, Agency, ABN, Court, releaseDate, releaseCode, SOID from jailnew.bookingsB;
-insert into people (SOID, name, DOB, POB, Race, e) select * from (select SOID, name, DOB, POB, race, e from jailnew.bookingsB group by SOID);
-insert into BookingsCharges(bookingNumber, chargeType, charge_id) select bookingNumber, chargeType, charge_id from (select a.bookingNumber, a.chargeType, b.charge_id from jailnew.booking_addl_charge a left join charges b on a.charge = b.charge_name);
-insert into BookingsCharges(bookingNumber, chargeType, charge_id) select bookingNumber, chargeType, charge_id from (select a.bookingNumber, a.chargeType, b.charge_id from jailnew.bookingsB a left join charges b on a.charge = b.charge_name);
 
-	
+###The table bookings contains all the the attributes uniquely determined by the bookingNumber.
+=>CREATE TABLE bookings(bookingNumber int PRIMARY KEY, Agency varchar, ABN int, Court varchar, releaseDate timestamp, releaseCode varchar,SOID int, FOREIGN KEY (SOID) REFERENCES people(SOID));
+
+###A table for the names of all charges with a serial PK to avoid repetition in other tables.
+=>CREATE TABLE charges(charge_id INTEGER PRIMARY KEY AUTOINCREMENT, charge_name VARCHAR UNIQUE);
+
+###Ditto for addresses.
+=>CREATE TABLE Addresses(Address_id INTEGER PRIMARY KEY AUTOINCREMENT, address VARCHAR UNIQUE);
+
+
+###Ditto for ChargeType.
+=>CREATE TABLE ChargeType(chargeType_id INTEGER PRIMARY KEY AUTOINCREMENT, chargeType VARCHAR UNIQUE);
+
+
+
+###SOID uniquely identifies a person, which determines race, DOB, and all the other attributes in this table.
+=>CREATE TABLE people(SOID INTEGER PRIMARY KEY, name VARCHAR, DOB TIMESTAMP, POB VARCHAR, Race CHAR(1) CHECK (Race IN ("A","B","I","U","W","a","b","w")), e CHAR(1) CHECK (e IN ("H","N","U","h","n","u")));
+
+###Now begin inserting data, being sure to select DISTINCT when necessary to not throw constraint violations.
+=>INSERT INTO addresses (address) SELECT DISTINCT address address FROM jailnew.bookingsB;
+
+
+=>INSERT INTO bookings SELECT bookingNumber, Agency, ABN, Court, releaseDate, releaseCode, SOID FROM jailnew.bookingsB;
+
+
+=>INSERT INTO people (SOID, name, DOB, POB, Race, e) SELECT * FROM (select SOID, name, DOB, POB, race, e from jailnew.bookingsB group by SOID);
+
+
+=>INSERT INTO ChargeType(chargeType) SELECT DISTINCT chargeType chargeType FROM jailnew.booking_addl_charge;
+
+###This command makes sure we didn't miss any chargetypes that might have appeared in booking_addl_charges.
+=>INSERT INTO ChargeType(chargeType) SELECT DISTINCT chargeType chargeType FROM jailnew.bookingsB WHERE jailnew.bookingsB.chargeType NOT IN (select chargeType from ChargeType);
+
+
+=>INSERT INTO charges (charge_name) SELECT DISTINCT charge charge_name FROM (SELECT DISTINCT charge FROM jailnew.booking_addl_charge);
+
+
+=> CREATE TABLE Courts(court_id INTEGER PRIMARY KEY AUTOINCREMENT, Court VARCHAR UNIQUE);
+
+
+=>INSERT INTO Courts (Court) SELECT DISTINCT court court FROM jailnew.bookingsB;
+
+###There are entire repeated rows in booking_addl_charges. bookingNumber, caseNumber--everything. I took this to mean that one person was being tried for multiple counts of the same crime in the same case on the same booking. I created a unique index for each count of each crime.
+=>CREATE TABLE all_counts(bookingNumber INTEGER, chargeType_id INTEGER, charge_id INTEGER, caseNumber VARCHAR, FOREIGN KEY (bookingNumber) REFERENCES bookings(bookingNumber), FOREIGN KEY (charge_id) REFERENCES charges(charge_id), FOREIGN KEY (chargeType_id) REFERENCES ChargeType(chargeType_id));
+
+###Now I make a temporary table to consolidate some attributes that appear in separate tables in order to avoid multiple joins in one query. This temp table was too big for ROM though, so I made it a not-temparary table, and then drop it when I'm done with it.
+=>CREATE TABLE all_charges_extra(bookingNumber INTEGER, chargeType VARCHAR, chargeType_id INTEGER, charge VARCHAR, charge_id INTEGER, caseNumber VARCHAR);
+
+
+###Now we grab all the data we can in one query and insert it into all_counts. I unioned bookingsB and booking_addl_charges to grab all counts at once. But I need separate queries to efficiently grab the charge_id without doing a possibly hazardous triple join.
+=>INSERT INTO all_counts (bookingNumber, charge_id, caseNumber) SELECT b.bookingNumber bookingNumber, c.charge_id charge_id, b.caseNumber caseNumber FROM all_charges_extra b LEFT JOIN charges c ON b.charge = c.charge_name;
+
+
+###Last missing column from the all_counts table is the charge_id. 
+=>INSERT INTO all_counts(charge_id) SELECT c.charge_id charge_id FROM all_charges_extra a LEFT JOIN charges c ON a.charge=c.charge_name;
+
+
+
+
+
+
+
+
+
 
    2. New db jail_norm_ComerDecal.db (readable by Noah + Dr Gillman), and create the tables for a jail db in 3rd normal form. Use all appropriate integrity constraints.
    3. Populate the new db
